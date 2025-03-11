@@ -1,0 +1,2 @@
+python-telegram-bot==21.11.1  # Replace with the latest version if needed
+python-dotenv==1.0.0       # Optional, only if you use .env files
