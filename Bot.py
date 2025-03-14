@@ -53,7 +53,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                 f"<b>Сообщение:</b>\n{update.message.text}",
                 parse_mode=ParseMode.HTML
             )
-        # Для всех медиа-типов (включая голосовые, файлы, фото, видео и т.д.)
         else:
             # Формируем описание контента
             content_type = "Файл"
@@ -87,6 +86,28 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     )
     user_activity[user.id] = new_task
 
+async def handle_admin_reply(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if update.message.from_user.id != ADMIN_ID:
+        return
+
+    # Проверяем, является ли сообщение командой /reply
+    text = update.message.text
+    if text.startswith("/reply"):
+        try:
+            _, user_id, *reply_text = text.split(maxsplit=2)
+            user_id = int(user_id)
+            reply_text = " ".join(reply_text)
+
+            # Отправляем ответ пользователю
+            await context.bot.send_message(
+                chat_id=user_id,
+                text=f"<b>Ответ от администратора:</b>\n{reply_text}",
+                parse_mode=ParseMode.HTML
+            )
+            await update.message.reply_text(f"Ваш ответ отправлен пользователю с ID {user_id}.")
+        except (ValueError, IndexError):
+            await update.message.reply_text("Неправильный формат команды. Используйте: /reply user_id текст_ответа")
+
 async def handle_inactivity(context: ContextTypes.DEFAULT_TYPE, user_id: int) -> None:
     try:
         await asyncio.sleep(THANK_YOU_DELAY)
@@ -106,7 +127,8 @@ async def run_bot():
         try:
             async with Application.builder().token(BOT_TOKEN).build() as app:
                 app.add_handler(CommandHandler("start", start))
-                app.add_handler(MessageHandler(filters.ALL, handle_message))
+                app.add_handler(MessageHandler(filters.ALL & ~filters.COMMAND, handle_message))
+                app.add_handler(MessageHandler(filters.Regex(r"^/reply"), handle_admin_reply))
                 
                 await app.initialize()
                 await app.start()
